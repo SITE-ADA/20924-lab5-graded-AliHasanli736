@@ -21,6 +21,8 @@ public class EventServiceImpl implements EventService {
         this.eventRepository = eventRepository;
     }
 
+    // ================= BASIC CRUD =================
+
     @Override
     public Event createEvent(Event event) {
         if (event.getId() == null) {
@@ -31,8 +33,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public Event getEventById(UUID id) {
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found with id: " + id));
+        return eventRepository.findById(id).orElse(null);
     }
 
     @Override
@@ -42,38 +43,47 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public Event updateEvent(UUID id, Event event) {
-        if (!eventRepository.existsById(id)) {
-            throw new RuntimeException("Event not found with id: " + id);
+
+        Event existingEvent = eventRepository.findById(id).orElse(null);
+        if (existingEvent == null) {
+            return null;
         }
+
         event.setId(id);
         return eventRepository.save(event);
     }
 
     @Override
     public void deleteEvent(UUID id) {
-        if (!eventRepository.existsById(id)) {
-            throw new RuntimeException("Event not found with id: " + id);
+        if (eventRepository.existsById(id)) {
+            eventRepository.deleteById(id);
         }
-        eventRepository.deleteById(id);
     }
 
     @Override
     public Event partialUpdateEvent(UUID id, Event partialEvent) {
-        Event existingEvent = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found with id: " + id));
+
+        Event existingEvent = eventRepository.findById(id).orElse(null);
+        if (existingEvent == null) {
+            return null;
+        }
 
         if (partialEvent.getEventName() != null) {
             existingEvent.setEventName(partialEvent.getEventName());
         }
+
         if (partialEvent.getTags() != null && !partialEvent.getTags().isEmpty()) {
             existingEvent.setTags(partialEvent.getTags());
         }
+
         if (partialEvent.getTicketPrice() != null) {
             existingEvent.setTicketPrice(partialEvent.getTicketPrice());
         }
+
         if (partialEvent.getEventDateTime() != null) {
             existingEvent.setEventDateTime(partialEvent.getEventDateTime());
         }
+
         if (partialEvent.getDurationMinutes() > 0) {
             existingEvent.setDurationMinutes(partialEvent.getDurationMinutes());
         }
@@ -91,9 +101,10 @@ public class EventServiceImpl implements EventService {
         }
 
         return eventRepository.findAll().stream()
-                .filter(event -> event.getTags() != null &&
-                        event.getTags().stream()
-                                .anyMatch(t -> t.equalsIgnoreCase(tag.trim())))
+                .filter(event -> event.getTags() != null)
+                .filter(event -> event.getTags()
+                        .stream()
+                        .anyMatch(t -> t.equalsIgnoreCase(tag.trim())))
                 .collect(Collectors.toList());
     }
 
@@ -103,8 +114,8 @@ public class EventServiceImpl implements EventService {
         LocalDateTime now = LocalDateTime.now();
 
         return eventRepository.findAll().stream()
-                .filter(event -> event.getEventDateTime() != null &&
-                        event.getEventDateTime().isAfter(now))
+                .filter(event -> event.getEventDateTime() != null)
+                .filter(event -> event.getEventDateTime().isAfter(now))
                 .collect(Collectors.toList());
     }
 
@@ -117,7 +128,8 @@ public class EventServiceImpl implements EventService {
 
         return eventRepository.findAll().stream()
                 .filter(event -> event.getTicketPrice() != null)
-                .filter(event -> event.getTicketPrice().compareTo(minPrice) >= 0 &&
+                .filter(event ->
+                        event.getTicketPrice().compareTo(minPrice) >= 0 &&
                         event.getTicketPrice().compareTo(maxPrice) <= 0)
                 .collect(Collectors.toList());
     }
@@ -131,7 +143,8 @@ public class EventServiceImpl implements EventService {
 
         return eventRepository.findAll().stream()
                 .filter(event -> event.getEventDateTime() != null)
-                .filter(event -> !event.getEventDateTime().isBefore(start) &&
+                .filter(event ->
+                        !event.getEventDateTime().isBefore(start) &&
                         !event.getEventDateTime().isAfter(end))
                 .collect(Collectors.toList());
     }
@@ -140,14 +153,15 @@ public class EventServiceImpl implements EventService {
     public Event updateEventPrice(UUID id, BigDecimal newPrice) {
 
         if (id == null || newPrice == null || newPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Invalid id or price");
+            return null;
         }
 
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found with id: " + id));
+        Event event = eventRepository.findById(id).orElse(null);
+        if (event == null) {
+            return null;
+        }
 
         event.setTicketPrice(newPrice);
-
         return eventRepository.save(event);
     }
 }
